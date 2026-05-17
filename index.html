@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EV Bus Eco-Driving</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; margin: 0; color: #fff; overflow-x: hidden; background-color: #0f1923; }
+        
+        .video-container { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: -1; background: #000; }
+        .video-background { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; filter: brightness(0.35); transition: opacity 2s ease-in-out; opacity: 0; }
+        .video-background.active { opacity: 1; }
+        
+        .navbar { background: rgba(0, 0, 0, 0.8); padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #3498db; backdrop-filter: blur(10px);}
+        .navbar-brand { font-size: 22px; font-weight: bold; display: flex; align-items: center; gap: 10px; }
+        .nav-links a { color: white; text-decoration: none; font-weight: bold; margin-left: 15px; padding: 10px 18px; border-radius: 6px; transition: 0.3s; font-size: 14px; }
+        .nav-links a:hover { background: rgba(52, 152, 219, 0.3); }
+        .nav-links .highlight { background: #e67e22; }
+        .nav-links .highlight:hover { background: #d35400; }
+        
+        .dashboard { max-width: 850px; margin: 40px auto; background: rgba(15, 25, 35, 0.85); backdrop-filter: blur(15px); padding: 40px; border-radius: 16px; box-shadow: 0 20px 40px rgba(0,0,0,0.8); border: 1px solid rgba(255,255,255,0.1); }
+        h2 { text-align: center; border-bottom: 2px solid rgba(255,255,255,0.1); padding-bottom: 20px; text-transform: uppercase; letter-spacing: 2px; font-size: 24px;}
+        
+        .scenario-selector { display: flex; justify-content: center; margin-bottom: 30px; gap: 20px; }
+        .radio-btn { display: none; }
+        .radio-label { padding: 12px 35px; background: rgba(255,255,255,0.05); border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.3s; border: 1px solid rgba(255,255,255,0.1); }
+        .radio-btn:checked + .radio-label { background: #3498db; border-color: #3498db; box-shadow: 0 0 20px rgba(52,152,219,0.4);}
+
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
+        .input-group { display: flex; flex-direction: column; }
+        label { font-size: 12px; margin-bottom: 6px; color: #bdc3c7; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;}
+        input { padding: 12px; background: rgba(0,0,0,0.5); color: #34db98; border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; font-size: 16px; font-weight: bold; transition: 0.3s;}
+        input:focus { border-color: #3498db; outline: none; background: rgba(0,0,0,0.8); box-shadow: 0 0 10px rgba(52,152,219,0.3);}
+        
+        button.submit-btn { width: 100%; padding: 18px; background: linear-gradient(135deg, #27ae60, #2ecc71); color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 18px; font-weight: bold; margin-top: 35px; transition: 0.3s; text-transform: uppercase; letter-spacing: 1px;}
+        button.submit-btn:hover { box-shadow: 0 0 25px rgba(46, 204, 113, 0.5); transform: translateY(-2px); }
+
+        /* Modal Styling */
+        .modal { display: none; position: fixed; z-index: 10; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.8); backdrop-filter: blur(5px); }
+        .modal-content { background-color: #1e272e; margin: 10% auto; padding: 40px; border: 1px solid #3498db; width: 60%; border-radius: 12px; color: white; line-height: 1.6;}
+        .close { color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; }
+        .close:hover { color: white; }
+    </style>
+</head>
+<body>
+
+    <div class="video-container">
+        <video id="video1" class="video-background active" autoplay muted loop playsinline></video>
+        <video id="video2" class="video-background" autoplay muted loop playsinline></video>
+    </div>
+
+    <div class="navbar">
+        <div class="navbar-brand">⚡ EV Eco-Driving Analyzer</div>
+        <div class="nav-links">
+            <a href="#" onclick="openModal()">About Project</a>
+            <a href="/">Console</a>
+            <a href="/graphs" class="highlight">📊 Insights Dashboard</a>
+        </div>
+    </div>
+
+    <div id="aboutModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal()">&times;</span>
+            <h2 style="border-bottom: none; text-align: left; margin-top: 0; color: #3498db;">About The Project</h2>
+            <p><strong>Title:</strong> Eco-Driving Level Evaluation Model for Electric Buses Entering and Leaving Stops.</p>
+            <p>Electric Buses play a vital role in sustainable urban transportation, but their energy efficiency is highly influenced by driving behavior during frequent stop entries and departures.</p>
+            <p>This system uses Machine Learning (XGBoost & Gradient Boosting) alongside Explainable AI to evaluate real-time telemetry data. It provides instant feedback and dynamic dashboards to help fleet managers optimize battery life and improve passenger comfort.</p>
+            <br>
+            <p style="color: #7f8c8d; font-size: 14px;"><strong>Developed By:</strong> Rahul, Wasiya, and Chandana</p>
+        </div>
+    </div>
+
+    <div class="dashboard">
+        <h2>Driver Evaluation Console</h2>
+        <form action="/predict" method="POST">
+            <div class="scenario-selector">
+                <input type="radio" id="entering" name="scenario" value="entering" class="radio-btn" checked>
+                <label for="entering" class="radio-label">🛑 Entering Stop</label>
+                <input type="radio" id="leaving" name="scenario" value="leaving" class="radio-btn">
+                <label for="leaving" class="radio-label">🚌 Leaving Stop</label>
+            </div>
+            
+            <div class="form-grid">
+                <div class="input-group"><label>Maximum Speed</label><input type="number" step="any" name="max_speed" placeholder="-0.372" required /></div>
+                <div class="input-group"><label>Std Nonzero Speed</label><input type="number" step="any" name="std_nonzero_speed" placeholder="1.576" required /></div>
+                <div class="input-group"><label>Max Brake Pedal</label><input type="number" step="any" name="max_brake_pedal" placeholder="0.457" required /></div>
+                <div class="input-group"><label>Avg Brake Pedal</label><input type="number" step="any" name="avg_brake_pedal" placeholder="0.053" required /></div>
+                <div class="input-group"><label>Brake GT 2m/s³ (%)</label><input type="number" step="any" name="brake_gt_2" placeholder="2.06" required /></div>
+                <div class="input-group"><label>Max Acceleration</label><input type="number" step="any" name="max_accel" placeholder="-0.766" required /></div>
+                <div class="input-group"><label>Mean Positive Accel</label><input type="number" step="any" name="mean_pos_accel" placeholder="1.646" required /></div>
+                <div class="input-group"><label>Mean Negative Accel</label><input type="number" step="any" name="mean_neg_accel" placeholder="-0.699" required /></div>
+                <div class="input-group"><label>Mean Jerk</label><input type="number" step="any" name="mean_jerk" placeholder="1.072" required /></div>
+                <div class="input-group"><label>Std Abs Jerk</label><input type="number" step="any" name="std_abs_jerk" placeholder="-0.739" required /></div>
+                <div class="input-group"><label>Decel Time Percent</label><input type="number" step="any" name="decel_time_pct" placeholder="-1.243" required /></div>
+                <div class="input-group"><label>CPK Value</label><input type="number" step="any" name="cpk_value" placeholder="1.643" required /></div>
+            </div>
+            <button type="submit" class="submit-btn">Execute Telemetry Analysis</button>
+        </form>
+    </div>
+
+    <script>
+        // Modal Logic
+        function openModal() { document.getElementById('aboutModal').style.display = 'block'; }
+        function closeModal() { document.getElementById('aboutModal').style.display = 'none'; }
+        window.onclick = function(event) { if (event.target == document.getElementById('aboutModal')) { closeModal(); } }
+
+        // Video Logic
+        const videoPlaylist = [
+            "{{ url_for('static', filename='bus_background.mp4') }}",
+            "{{ url_for('static', filename='morning_rush.mp4') }}",
+            "{{ url_for('static', filename='highway_buses.mp4') }}",
+            "{{ url_for('static', filename='night_life.mp4') }}"
+        ];
+
+        let currentVideoIndex = 0;
+        const video1 = document.getElementById('video1');
+        const video2 = document.getElementById('video2');
+        let activeVideo = video1;
+        let hiddenVideo = video2;
+
+        video1.src = videoPlaylist[0];
+        video1.play().catch(e => console.log("Waiting for user interaction."));
+
+        function crossfadeVideos() {
+            if (videoPlaylist.length > 1) { 
+                currentVideoIndex = (currentVideoIndex + 1) % videoPlaylist.length;
+                hiddenVideo.src = videoPlaylist[currentVideoIndex];
+                
+                hiddenVideo.onerror = function() { crossfadeVideos(); };
+
+                hiddenVideo.onloadeddata = () => {
+                    hiddenVideo.play().then(() => {
+                        hiddenVideo.classList.add('active');
+                        activeVideo.classList.remove('active');
+                        let temp = activeVideo; activeVideo = hiddenVideo; hiddenVideo = temp;
+                    }).catch(e => console.log("Playback interrupted"));
+                };
+            }
+        }
+        setInterval(crossfadeVideos, 12000);
+    </script>
+</body>
+</html>
